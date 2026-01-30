@@ -1,0 +1,7 @@
+{
+  "name": "LuminaSign Digital Signage Cloud",
+  "description": "A comprehensive digital signage platform for managing remote screens, creating playlists, and generating AI-powered content designs.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
