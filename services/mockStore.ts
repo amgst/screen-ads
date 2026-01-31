@@ -15,6 +15,7 @@ import {
 import { db } from './firebase';
 
 const IMGBB_API_KEY = '3666496bd414d7fd557409414f034abe'; // Provided by user
+export const HEARTBEAT_TIMEOUT = 30000; // 30 seconds
 
 class FirebaseStore {
   private screens: Screen[] = [];

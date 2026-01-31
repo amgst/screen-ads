@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Monitor, Image as ImageIcon, PlayCircle, Activity, Sparkles, Layout } from 'lucide-react';
-import { store } from '../services/mockStore';
+import { store, HEARTBEAT_TIMEOUT } from '../services/mockStore';
 
 const StatCard = ({ label, value, icon: Icon, color }: { label: string, value: string | number, icon: any, color: string }) => (
   <div className="bg-slate-800 border border-slate-700 p-6 rounded-xl">
@@ -27,11 +27,23 @@ const Dashboard = () => {
       setMedia([...store.getMedia()]);
       setPlaylists([...store.getPlaylists()]);
     });
-    return unsub;
+
+    // Refresh connectivity UI every 10 seconds in case a heartbeat expires
+    const refreshInterval = setInterval(() => {
+      setScreens([...store.getScreens()]);
+    }, 10000);
+
+    return () => {
+      unsub();
+      clearInterval(refreshInterval);
+    };
   }, []);
 
+  const isScreenOnline = (lastHeartbeat: number) => {
+    return (Date.now() - lastHeartbeat) < HEARTBEAT_TIMEOUT;
+  };
 
-  const onlineScreens = screens.filter(s => s.status === 'online').length;
+  const onlineScreensCount = screens.filter(s => isScreenOnline(s.lastHeartbeat)).length;
 
   return (
     <div className="space-y-8">
@@ -53,7 +65,7 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard label="Total Screens" value={screens.length} icon={Monitor} color="bg-blue-600" />
-        <StatCard label="Online Now" value={onlineScreens} icon={Activity} color="bg-green-600" />
+        <StatCard label="Online Now" value={onlineScreensCount} icon={Activity} color="bg-green-600" />
         <StatCard label="Media Assets" value={media.length} icon={ImageIcon} color="bg-purple-600" />
         <StatCard label="Active Playlists" value={playlists.length} icon={PlayCircle} color="bg-amber-600" />
       </div>
@@ -80,10 +92,17 @@ const Dashboard = () => {
                   <tr key={screen.id} className="hover:bg-slate-700/30 transition-colors">
                     <td className="px-6 py-4 font-medium">{screen.name}</td>
                     <td className="px-6 py-4">
-                      <span className={`flex items-center space-x-2 text-xs font-semibold px-2 py-1 rounded-full ${screen.status === 'online' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${screen.status === 'online' ? 'bg-green-500' : 'bg-red-500'}`} />
-                        <span>{screen.status.toUpperCase()}</span>
-                      </span>
+                      {isScreenOnline(screen.lastHeartbeat) ? (
+                        <span className="flex items-center space-x-2 text-xs font-semibold px-2 py-1 rounded-full bg-green-500/10 text-green-500">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                          <span>ONLINE</span>
+                        </span>
+                      ) : (
+                        <span className="flex items-center space-x-2 text-xs font-semibold px-2 py-1 rounded-full bg-red-500/10 text-red-500">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                          <span>OFFLINE</span>
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-slate-400">
                       {playlists.find(p => p.id === screen.currentPlaylistId)?.name || 'None'}

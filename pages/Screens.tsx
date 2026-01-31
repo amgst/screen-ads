@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Monitor, Plus, Link as LinkIcon, AlertCircle, PlayCircle, Settings, Trash2 } from 'lucide-react';
-import { store } from '../services/mockStore';
+import { store, HEARTBEAT_TIMEOUT } from '../services/mockStore';
 
 const Screens = () => {
   const [screens, setScreens] = useState(store.getScreens());
@@ -15,8 +15,20 @@ const Screens = () => {
       setScreens([...store.getScreens()]);
       setPlaylists([...store.getPlaylists()]);
     });
-    return unsub;
+
+    const refreshInterval = setInterval(() => {
+      setScreens([...store.getScreens()]);
+    }, 10000);
+
+    return () => {
+      unsub();
+      clearInterval(refreshInterval);
+    };
   }, []);
+
+  const isScreenOnline = (lastHeartbeat: number) => {
+    return (Date.now() - lastHeartbeat) < HEARTBEAT_TIMEOUT;
+  };
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +57,7 @@ const Screens = () => {
           <h1 className="text-3xl font-bold text-white">Manage Screens</h1>
           <p className="text-slate-400 mt-1">Add, pair, and assign content to your signage devices.</p>
         </div>
-        <button 
+        <button
           onClick={() => setIsAdding(true)}
           className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors"
         >
@@ -59,8 +71,8 @@ const Screens = () => {
           <form onSubmit={handleAdd} className="flex flex-col md:flex-row items-end gap-4">
             <div className="flex-1 space-y-2">
               <label className="text-sm font-medium text-slate-400">Screen Name</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="e.g. Lobby Entrance TV"
@@ -69,8 +81,8 @@ const Screens = () => {
             </div>
             <div className="w-full md:w-48 space-y-2">
               <label className="text-sm font-medium text-slate-400">Pairing Code (6 digits)</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 maxLength={6}
                 value={pairingCode}
                 onChange={(e) => setPairingCode(e.target.value)}
@@ -91,7 +103,7 @@ const Screens = () => {
           <div key={screen.id} className="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-4 hover:border-slate-500 transition-colors">
             <div className="flex justify-between items-start">
               <div className="flex items-center space-x-3">
-                <div className={`p-2 rounded-lg ${screen.status === 'online' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
+                <div className={`p-2 rounded-lg ${isScreenOnline(screen.lastHeartbeat) ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
                   <Monitor size={20} />
                 </div>
                 <div>
@@ -100,7 +112,7 @@ const Screens = () => {
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <button 
+                <button
                   onClick={() => handleDelete(screen.id, screen.name)}
                   className="text-slate-500 hover:text-red-400 p-1 transition-colors"
                   title="Delete Screen"
@@ -115,8 +127,8 @@ const Screens = () => {
 
             <div className="space-y-2">
               <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Current Playlist</label>
-              <select 
-                value={screen.currentPlaylistId || ''} 
+              <select
+                value={screen.currentPlaylistId || ''}
                 onChange={(e) => handlePlaylistChange(screen.id, e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
@@ -129,7 +141,7 @@ const Screens = () => {
 
             <div className="pt-4 border-t border-slate-700 flex justify-between items-center text-xs text-slate-400">
               <div className="flex items-center space-x-1">
-                <Activity size={12} className={screen.status === 'online' ? 'text-green-500' : 'text-red-500'} />
+                <Activity size={12} className={isScreenOnline(screen.lastHeartbeat) ? 'text-green-500' : 'text-red-500'} />
                 <span>Last updated {new Date(screen.lastHeartbeat).toLocaleTimeString()}</span>
               </div>
               {screen.currentPlaylistId && (
