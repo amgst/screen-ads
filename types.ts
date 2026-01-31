@@ -42,9 +42,3 @@ export interface Schedule {
   endTime: string; // HH:mm
   days: number[]; // 0-6 (Sun-Sat)
 }
-
-export interface AISlideConfig {
-  topic: string;
-  businessType: string;
-  style: 'modern' | 'corporate' | 'vibrant' | 'minimal';
-}
