@@ -16,7 +16,6 @@ const Player = () => {
   const [screen, setScreen] = useState<Screen | undefined>(store.getScreens().find(s => s.pairingCode === pairingCode));
   const [currentPlaylist, setCurrentPlaylist] = useState<Playlist | null>(null);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -104,27 +103,37 @@ const Player = () => {
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => { });
-      setIsFullscreen(true);
     } else {
       document.exitFullscreen().catch(() => { });
-      setIsFullscreen(false);
     }
   };
 
-  const BackButton = () => (
-    <Link
-      to="/admin"
-      className="absolute top-6 left-6 z-50 flex items-center space-x-2 bg-black/40 hover:bg-black/80 text-white px-4 py-2 rounded-full backdrop-blur-md border border-white/20 transition-all opacity-0 group-hover:opacity-100"
-    >
-      <ChevronLeft size={18} />
-      <span className="text-sm font-semibold">Exit to Admin</span>
-    </Link>
-  );
+  useEffect(() => {
+    // Attempt fullscreen on mount
+    const enterFullscreen = () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {
+          console.log("Auto-fullscreen blocked. Waiting for user interaction.");
+        });
+      }
+    };
+
+    enterFullscreen();
+
+    // Fallback: enter fullscreen on first click
+    const handleFirstInteraction = () => {
+      enterFullscreen();
+      window.removeEventListener('click', handleFirstInteraction);
+    };
+
+    window.addEventListener('click', handleFirstInteraction);
+    return () => window.removeEventListener('click', handleFirstInteraction);
+  }, []);
+
 
   if (!screen || !screen.userId) {
     return (
       <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-8 text-center relative group">
-        <BackButton />
         <div className="w-24 h-24 bg-blue-600 rounded-3xl flex items-center justify-center mb-8 animate-pulse shadow-[0_0_50px_rgba(37,99,235,0.3)]">
           <Monitor size={48} />
         </div>
@@ -147,7 +156,6 @@ const Player = () => {
   if (!currentPlaylist || currentPlaylist.items.length === 0) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white relative group">
-        <BackButton />
         <div className="text-center">
           <PlayCircle size={64} className="text-slate-800 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-slate-700">No Content Assigned</h2>
@@ -170,7 +178,6 @@ const Player = () => {
 
   return (
     <div className="fixed inset-0 bg-black overflow-hidden flex items-center justify-center group">
-      <BackButton />
       <div className="w-full h-full relative">
         {media?.type === 'image' ? (
           <img
@@ -200,7 +207,7 @@ const Player = () => {
 
       <div className="absolute inset-0 cursor-none hover:cursor-default">
         <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-6 flex justify-between items-start pointer-events-none">
-          <div className="pl-32"> {/* Push right to clear back button */}
+          <div>
             <div className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-1">Now Playing</div>
             <div className="text-xl font-bold text-white drop-shadow-md">{media?.name || 'Untitled Content'}</div>
             {playlistIdRef.current !== screen.currentPlaylistId && (
